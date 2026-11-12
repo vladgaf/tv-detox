@@ -15,6 +15,7 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -135,7 +136,8 @@ public class MainActivity extends Activity {
     // white labels stay easy to read. Only colours, no images, so every one costs the same as Dusk,
     // the default.
     private static final String[] WALLPAPER_NAMES = {"Dusk", "Midnight", "Plum", "Forest", "Graphite", "Ocean", "Ember",
-            "Sunset", "Lagoon", "Aurora", "Coral", "Iris", "Meadow", "Gold"};
+            "Sunset", "Lagoon", "Aurora", "Coral", "Iris", "Meadow", "Gold", "Photo"};
+    // "Photo" is last: it draws the baked-in res/drawable/custom_wallpaper image instead of a gradient.
     private static final int[][] WALLPAPERS = {
         {0xFF15100F, 0xFF0A0809, 0xFF050405, 0x36FF8048, 0x2EAA3C8C},
         {0xFF0E1220, 0xFF080A13, 0xFF040509, 0x384A6CFF, 0x2E5A3CC8},
@@ -151,6 +153,8 @@ public class MainActivity extends Activity {
         {0xFF5A3CAE, 0xFF3A2A84, 0xFF16123A, 0x90C080FF, 0x804A7CFF},
         {0xFF2E6E4C, 0xFF1C4A40, 0xFF0A201E, 0x90A8E070, 0x6030A8A8},
         {0xFFB07624, 0xFF86401E, 0xFF2A1410, 0x90FFD060, 0x70FF5040},
+        // Only used for the preview dot of "Photo"; the real background is the image itself.
+        {0xFF202428, 0xFF14171A, 0xFF0A0C0E, 0x3080A0C0, 0x2860C0A0},
     };
     private float scale = 1f;
 
@@ -282,7 +286,8 @@ public class MainActivity extends Activity {
         String quick = intent == null ? null : intent.getStringExtra("quick");
         String clock = intent == null ? null : intent.getStringExtra("clock");
         String fake = intent == null ? null : intent.getStringExtra("fakeinputs");
-        if (apps == null && quick == null && clock == null && fake == null) return false;
+        String wall = intent == null ? null : intent.getStringExtra("wallpaper");
+        if (apps == null && quick == null && clock == null && fake == null && wall == null) return false;
         SharedPreferences prefs = getSharedPreferences(PREFS, 0);
         String stamp = intent.getStringExtra("stamp");
         if (stamp != null && stamp.equals(prefs.getString("stamp", null))) return false;
@@ -303,6 +308,7 @@ public class MainActivity extends Activity {
             if (clock.isEmpty() || clock.equalsIgnoreCase("auto")) e.remove(PREF_CLOCK);
             else e.putString(PREF_CLOCK, clock);
         }
+        if (wall != null && !wall.trim().isEmpty()) e.putString("wallpaper", wall.trim());
         // Set only by install.sh's FAKE_INPUT=1, which also installs the throwaway input itself.
         // It is for an emulator, which has no HDMI ports, and never for a real TV.
         if (fake != null) {
@@ -456,7 +462,55 @@ public class MainActivity extends Activity {
     }
 
     private void showWallpaper(int i) {
-        getWindow().setBackgroundDrawable(background(WALLPAPERS[i]));
+        if (i == WALLPAPER_NAMES.length - 1) {
+            getWindow().setBackgroundDrawable(photoBackground());
+        } else {
+            getWindow().setBackgroundDrawable(background(WALLPAPERS[i]));
+        }
+    }
+
+    // The baked-in photo (res/drawable/custom_wallpaper), scaled center-crop to fill the screen and
+    // flattened to one picture like the gradients. On any failure, Dusk takes over.
+    private Drawable photoBackground() {
+        int w = getResources().getDisplayMetrics().widthPixels, h = getResources().getDisplayMetrics().heightPixels;
+        try {
+            int id = getResources().getIdentifier("custom_wallpaper", "drawable", getPackageName());
+            if (id == 0) return background(WALLPAPERS[0]);
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            BitmapFactory.decodeResource(getResources(), id, bounds);
+            float s = Math.max(w / (float) bounds.outWidth, h / (float) bounds.outHeight);
+            Bitmap full = BitmapFactory.decodeResource(getResources(), id);
+            Bitmap scaled = Bitmap.createScaledBitmap(full, Math.round(bounds.outWidth * s),
+                    Math.round(bounds.outHeight * s), true);
+            full.recycle();
+            Bitmap bm = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+            Canvas cv = new Canvas(bm);
+            cv.drawBitmap(scaled, (w - scaled.getWidth()) / 2f, (h - scaled.getHeight()) / 2f, null);
+            scaled.recycle();
+            // Dim for readability on a bright photo: a slight veil everywhere, a stronger
+            // shade over the top half (clock, date, shortcut icons), and one from the bottom,
+            // where the app and input tiles sit.
+            cv.drawColor(0x38000000);
+            GradientDrawable topShade = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                    new int[] {0x8C000000, 0x00000000});
+            topShade.setBounds(0, 0, w, (int) (h * 0.45f));
+            topShade.draw(cv);
+            GradientDrawable bottomShade = new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,
+                    new int[] {0x99000000, 0x00000000});
+            bottomShade.setBounds(0, (int) (h * 0.40f), w, h);
+            bottomShade.draw(cv);
+            if (android.os.Build.VERSION.SDK_INT >= 26) {
+                Bitmap hw = bm.copy(Bitmap.Config.HARDWARE, false);
+                if (hw != null) {
+                    bm.recycle();
+                    bm = hw;
+                }
+            }
+            return new BitmapDrawable(getResources(), bm);
+        } catch (Throwable t) {
+            return background(WALLPAPERS[0]);
+        }
     }
 
     // The wallpapers, each with a small dot of its colours. Moving through the list shows each one
