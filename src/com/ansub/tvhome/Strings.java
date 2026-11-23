@@ -13,6 +13,7 @@ final class Strings {
         "Move", "Replace", "Remove from home", "Uninstall", "App info",
         "Use the arrows to move it, then press OK", "Every app is already here", "Add an app", "Replace %s", "Wallpaper", "TV settings", "Brightness",
         "Rename", "Show hidden inputs", "TV", "Laptop", "PC", "Blu-ray", "Soundbar", "Type a name…",
+        "Timer",
     };
 
     // Keyed by language ("de"), or language-country ("zh-TW") where a country writes it differently.
@@ -98,6 +99,7 @@ final class Strings {
             "Переместить", "Заменить", "Убрать с главного экрана", "Удалить", "О приложении",
             "Перемещайте стрелками, затем нажмите OK", "Все приложения уже здесь", "Добавить приложение", "Заменить %s", "Обои", "Настройки телевизора", "Яркость",
             "Переименовать", "Показать скрытые входы", "Телевизор", "Ноутбук", "ПК", "Blu-ray", "Саундбар", "Введите название…",
+            "Таймер",
         });
         LANGS.put("tr", new String[] {
             "Ayarlar", "Uygulama ekle", "Ağ", "Çevrimdışı", "Ses", "Görüntü",
@@ -110,6 +112,7 @@ final class Strings {
             "Перемістити", "Замінити", "Прибрати з головного екрана", "Видалити", "Інформація про додаток",
             "Переміщуйте стрілками, а потім натисніть OK", "Усі додатки вже тут", "Додати додаток", "Замінити %s", "Шпалери", "Налаштування телевізора", "Яскравість",
             "Перейменувати", "Показати приховані входи", "Телевізор", "Ноутбук", "ПК", "Blu-ray", "Саундбар", "Введіть назву…",
+            "Таймер",
         });
         LANGS.put("zh", new String[] { // Simplified Chinese
             "设置", "添加应用", "网络", "未联网", "声音", "图像",

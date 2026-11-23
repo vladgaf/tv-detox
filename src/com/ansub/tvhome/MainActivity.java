@@ -7,6 +7,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -92,6 +93,7 @@ public class MainActivity extends Activity {
     private static final String PLAY_STORE = "com.android.vending";
     private static final String SETTINGS = "settings";
     private static final String ADD = "add";
+    private static final String TIMER = "timer";
     private static final String[] EDIT_ITEMS = {"Move", "Replace", "Remove from home", "Uninstall"};
     private static final String[] EDIT_ITEMS_SYSTEM = {"Move", "Replace", "Remove from home", "App info"};
     private static final int PER_ROW = 6, MAX_INPUTS = 4;
@@ -600,16 +602,17 @@ public class MainActivity extends Activity {
             addTile(root, pkg, label, banner, null, icon, gridX(i), gridY(i), w, h);
         }
 
-        // Bottom row: Play Store, HDMI inputs, Settings and Add app, six at most.
+        // Bottom row: Play Store, HDMI inputs, Timer, Settings and Add app, six at most.
         int col = 0;
         boolean store = !apps.contains(PLAY_STORE) && launchIntent(pm, PLAY_STORE) != null;
         List<TvInputInfo> inputs = hdmiInputs();
-        int room = PER_ROW - 2 - (store ? 1 : 0);
+        int room = PER_ROW - 3 - (store ? 1 : 0);
         if (inputs.size() > room) inputs = inputs.subList(0, room);
         if (store)
             addTile(root, PLAY_STORE, "Play Store", null, LineIcon.PLAY, null, m + col++ * (w + g), bottomTop, w, h);
         for (TvInputInfo in : inputs)
             addTile(root, in.getId(), inputLabel(in), null, LineIcon.HDMI, null, m + col++ * (w + g), bottomTop, w, h);
+        addTile(root, TIMER, Strings.t("Timer"), null, LineIcon.TIMER, null, m + col++ * (w + g), bottomTop, w, h);
         addTile(root, SETTINGS, Strings.t("Settings"), null, LineIcon.SETTINGS, null, m + col++ * (w + g), bottomTop, w, h);
         addTile(root, ADD, Strings.t("Add app"), null, LineIcon.PLUS, null, m + col * (w + g), bottomTop, w, h);
 
@@ -840,6 +843,9 @@ public class MainActivity extends Activity {
                 else openTvSettings();
             });
             return;
+        } else if (TIMER.equals(key)) {
+            openTimer();
+            return;
         } else if (isInput(key)) {
             openInput(key);
             return;
@@ -855,6 +861,24 @@ public class MainActivity extends Activity {
         }
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try { startActivity(i); } catch (Exception ignored) {}
+    }
+
+    // The Timer tile opens the TV's own sleep/off timer, the way an HDMI tile opens its input.
+    // On Xiaomi/Mi TVs it lives inside the settings app; anywhere else, open the TV settings.
+    // resolveActivity can't be trusted to say "no" for an explicit component, so ask for the
+    // activity outright: getActivityInfo throws when it's missing.
+    private void openTimer() {
+        ComponentName mi = new ComponentName("com.android.tv.settings",
+                "com.android.tv.settings.partnercustomizer.timer.TimerActivity");
+        try {
+            getPackageManager().getActivityInfo(mi, 0);
+            try {
+                startActivity(new Intent().setComponent(mi).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (Exception ignored) {}
+            return;
+        } catch (PackageManager.NameNotFoundException e) {
+            openTvSettings();
+        }
     }
 
     // Live TV apps an HDMI tile can open, in order. Droidlogic (Amlogic) TVs ship Live TV under their
