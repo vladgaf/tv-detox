@@ -124,8 +124,8 @@ public class MainActivity extends Activity {
     // Long enough to read as motion, short enough that a run of d-pad presses never feels behind.
     private static final int FOCUS_MS = 180, RADIUS_UP = 10;
     private static final Interpolator FOCUS_EASE = new DecelerateInterpolator(1.8f);
-    private static final int ROW1_TOP = 604, ROW_STEP = 224;
-    private static final int GRID_MIN_TOP = 400; // more rows push the grid up, but not into the clock
+    private static final int ROW_STEP = 224;
+    private static final int GRID_MIN_TOP = 400; // apps always start here, right under the clock
     private static final int ICON_TOP = 76, ICON_BUTTON = 72, ICON_SIZE = 40, ICON_GAP = 12; // level with the date
 
     // The Settings tile opens a small menu: the home screen's own settings, then the TV's.
@@ -240,7 +240,7 @@ public class MainActivity extends Activity {
         moveHint = text(px(24), 0xA8FFFFFF, regular);
         moveHint.setText(Strings.t("Use the arrows to move it, then press OK"));
         moveHint.setVisibility(View.GONE);
-        root.addView(moveHint, at(px(MARGIN), px(ROW1_TOP - 64), -2, -2));
+        root.addView(moveHint, at(px(MARGIN), px(GRID_MIN_TOP - 64), -2, -2));
 
         setContentView(scroller);
 
@@ -574,13 +574,15 @@ public class MainActivity extends Activity {
         tileH = h;
 
         List<String> apps = appList(pm);
-        // Apps fill rows of six. With more rows the grid starts higher, so up to two rows of apps and
-        // the bottom row still fit on screen; past that the page scrolls.
+        // Apps fill rows of six, starting right under the clock, however many rows there are.
+        // The bottom row hugs the bottom edge and moves up only when the app rows need the room;
+        // past two rows of apps the page scrolls.
         int launchable = 0;
         for (String pkg : apps) if (launchIntent(pm, pkg) != null) launchable++;
         int rows = Math.max(1, (launchable + PER_ROW - 1) / PER_ROW);
-        gridTop = Math.max(px(GRID_MIN_TOP), px(ROW1_TOP) - (rows - 1) * px(ROW_STEP));
-        int bottomTop = gridTop + rows * px(ROW_STEP);
+        gridTop = px(GRID_MIN_TOP);
+        int bottomTop = Math.max(gridTop + rows * px(ROW_STEP),
+                getResources().getDisplayMetrics().heightPixels - px(MARGIN) - h);
         ((FrameLayout.LayoutParams) moveHint.getLayoutParams()).topMargin = gridTop - px(64);
         root.setMinimumHeight(bottomTop + h + px(MARGIN));
 
